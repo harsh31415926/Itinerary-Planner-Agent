@@ -2,7 +2,7 @@ import os
 from typing import TypedDict, Annotated
 import operator 
 
-import psycopg
+# import psycopg
 from langgraph.graph import StateGraph , START , END
 from langgraph.checkpoint.postgres import PostgresSaver
 
@@ -26,7 +26,7 @@ from agents import (
 )
 
 
-DATABASE_URL = os.getenv('DATABASE_URL')
+# DATABASE_URL = os.getenv('DATABASE_URL')
 
 # Grapgh Compilation
 graph = StateGraph(TravelState)
