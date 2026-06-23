@@ -28,8 +28,6 @@ from agents import (
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 
-
-
 # Grapgh Compilation
 graph = StateGraph(TravelState)
 
@@ -46,20 +44,21 @@ graph.add_edge('hotel_agent' , 'itinerary_agent')
 graph.add_edge('itinerary_agent' , 'final_agent')
 graph.add_edge('final_agent' , END)
 
-print(DATABASE_URL)
+# print(DATABASE_URL)
 
+# print("DATABASE_URL =", repr(DATABASE_URL))
 
 # Database Connection POSTGRES
-__conn = psycopg.connect(
-    DATABASE_URL,
-    autocommit=True
-)
+# __conn = psycopg.connect(
+#     DATABASE_URL,
+#     autocommit=True
+# )
 
-checkpointer = PostgresSaver(__conn)
-checkpointer.setup()
+# checkpointer = PostgresSaver(__conn)
+# checkpointer.setup()
 
 
-app = graph.compile(checkpointer = checkpointer)
+app = graph.compile()
 
 # print(app.get_graph().draw_mermaid())    # It WILL print the graph of node
 
@@ -99,8 +98,8 @@ if __name__ == '__main__':
         config = config
     )
 
-    print("\n========== FINAL ITINERARY ==========")
-    print(result['itinerary'])
+    # print("\n========== FINAL ITINERARY ==========")
+    # print(result['itinerary'])
 
 
     # print("\nDEBUG STATE\n")

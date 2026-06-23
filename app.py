@@ -364,7 +364,7 @@ for qc, label in zip(qcols, QUICK):
             quick_fill = label
 
 user_query = st.text_area(
-    "",
+    "Trip request",
     value=quick_fill,
     placeholder="e.g. Plan a complete 7-day Japan trip including flights, hotels and sightseeing under ₹2 lakhs",
     height=100,

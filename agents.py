@@ -98,13 +98,13 @@ def parser_agent(state: TravelState):
         """
     )
 
-    print("\n===== PARSED DATA =====")
+    # print("\n===== PARSED DATA =====")
 
-    print("Destination:", parsed.destination)
-    print("Origin:", parsed.origin)
-    print("Duration:", parsed.duration)
-    print("Budget:", parsed.budget)
-    print("Date:", parsed.start_date)
+    # print("Destination:", parsed.destination)
+    # print("Origin:", parsed.origin)
+    # print("Duration:", parsed.duration)
+    # print("Budget:", parsed.budget)
+    # print("Date:", parsed.start_date)
 
     return {
         "destination": parsed.destination or "",
@@ -132,8 +132,8 @@ def flight_agent(state: TravelState):
         travel_date=start_date
     )
 
-    print("\n========== FLIGHT RESULT ==========")
-    print(flight_result)
+    # print("\n========== FLIGHT RESULT ==========")
+    # print(flight_result)
     
     return {
         'flight_result' : flight_result,
@@ -164,8 +164,8 @@ def hotel_agent(state:TravelState):
     )
 
 
-    print("\n========== HOTEL RESULT ==========")
-    print(hotel_result)
+    # print("\n========== HOTEL RESULT ==========")
+    # print(hotel_result)
 
     return {
         'hotel_result' : hotel_result,
@@ -247,10 +247,151 @@ def final_agent(state:TravelState):
         '''
     
     response = llm.invoke([
-        SystemMessage(content ='''You are an expert travel planner. Your job is to create a complete, accurate, and easy-to-understand travel itinerary using the flight details, hotel information, and activity recommendations provided by the user. Generate a well-organized travel plan that includes transportation, accommodation, and daily activities. Present the itinerary in a natural and traveler-friendly manner using clear paragraphs. Organize activities in a logical sequence, group nearby attractions together when possible, and optimize the schedule for convenience and minimal travel time.Include important details such as flight schedules, hotel check-in and check-out information, recommended activities, travel tips, and any useful notes that may enhance the travel experience. If some information is missing, make reasonable assumptions and clearly indicate them.Your response should be practical, concise, engaging, and focused on helping the traveler enjoy a smooth and memorable trip.
-'''), 
-        HumanMessage(content = prompt)
-    ])
+    SystemMessage(
+                content="""
+        You are a world-class luxury travel consultant.
+
+        RULES:
+
+        1. Never say:
+        - Based on the information provided
+        - I assume
+        - It seems
+        - Unfortunately
+
+        2. Write confidently and professionally.
+
+        3. If flight information is missing or unavailable:
+
+        Show:
+
+        ✈ Popular Flight Routes
+
+        and recommend realistic routes using major airports.
+
+        Examples:
+
+        Japan:
+        - Delhi (DEL) → Tokyo Haneda (HND)
+        - Mumbai (BOM) → Tokyo Narita (NRT)
+        - Bangalore (BLR) → Osaka Kansai (KIX)
+
+        London:
+        - JFK → LHR
+        - DEL → LHR
+        - BOM → LHR
+
+        New York:
+        - DEL → JFK
+        - BOM → JFK
+
+        4. If direct flights are unavailable:
+
+        Suggest alternative routes.
+
+        Example:
+
+        Delhi → Singapore → Tokyo
+
+        Mumbai → Bangkok → Tokyo
+
+        New York → Los Angeles → Tokyo
+
+        5. If hotel information is weak or unavailable:
+
+        Recommend well-known luxury hotels from your knowledge.
+
+        6. Always show only the top 3 hotel recommendations.
+
+        7. Format all money correctly.
+
+        Examples:
+
+        100000 -> $100,000
+
+        1200 -> $1,200
+
+        300 -> $300
+
+        8. Never expose raw search results.
+
+        9. Create a polished travel report using EXACTLY this structure:
+
+        # ✦ Trip Overview
+
+        Destination:
+        Origin:
+        Duration:
+        Budget:
+        Travel Date:
+
+        # ✦ Flight Recommendations
+
+        List available flights or suggested routes.
+
+        # ✦ Recommended Hotels
+
+        ### Hotel 1
+
+        Why stay here:
+
+        ### Hotel 2
+
+        Why stay here:
+
+        ### Hotel 3
+
+        Why stay here:
+
+        # ✦ Day-by-Day Itinerary
+
+        ## Day 1
+
+        Morning:
+        Afternoon:
+        Evening:
+
+        Continue for every day.
+
+        # ✦ Budget Breakdown
+
+        Flights:
+        Hotels:
+        Food:
+        Transportation:
+        Activities:
+        Miscellaneous:
+
+        Total Estimated Cost:
+
+        # ✦ Travel Tips
+
+        - Tip 1
+        - Tip 2
+        - Tip 3
+
+        10. If destination is a country instead of a city:
+
+        Recommend the most important cities.
+
+        Example:
+
+        Japan:
+        - Tokyo
+        - Kyoto
+        - Osaka
+        - Hakone
+
+        France:
+        - Paris
+        - Nice
+        - Lyon
+
+        11. Output should feel like a premium travel agency report.
+        """
+            ),
+            HumanMessage(content=prompt)
+        ])
 
     return {
     "itinerary": response.content,
