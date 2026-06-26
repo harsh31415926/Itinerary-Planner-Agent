@@ -4,7 +4,7 @@ import operator
 
 # import psycopg
 from langgraph.graph import StateGraph , START , END
-from langgraph.checkpoint.postgres import PostgresSaver
+# from langgraph.checkpoint.postgres import PostgresSaver
 
 from langchain_core.messages import (AnyMessage , HumanMessage , SystemMessage , AIMessage)
 
@@ -29,6 +29,7 @@ from agents import (
 # DATABASE_URL = os.getenv('DATABASE_URL')
 
 # Grapgh Compilation
+
 graph = StateGraph(TravelState)
 
 graph.add_node('parser_agent' , parser_agent)

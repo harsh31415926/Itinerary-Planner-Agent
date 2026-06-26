@@ -4,9 +4,9 @@ from pydantic import BaseModel
 import operator 
 import json
 
-import psycopg
+# import psycopg
 from langgraph.graph import StateGraph , START , END
-from langgraph.checkpoint.postgres import PostgresSaver
+# from langgraph.checkpoint.postgres import PostgresSaver
 
 from langchain_core.messages import (AnyMessage , HumanMessage , SystemMessage , AIMessage)
 
