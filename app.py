@@ -275,7 +275,7 @@ with st.sidebar:
     st.markdown(f"<div class='sidebar-title'>{icon('plane', 18)} AI Travel Planner</div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    thread_id = st.text_input("User ID", value="aarohi_user",
+    thread_id = st.text_input("User ID", value="harsh31415926",
                               help="Your session ID — keeps travel history across queries")
 
     st.markdown(f"<div class='sidebar-title'>{icon('cpu', 16)} Powered by</div>", unsafe_allow_html=True)
