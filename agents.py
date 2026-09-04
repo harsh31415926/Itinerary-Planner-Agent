@@ -22,16 +22,17 @@ load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 llm = ChatGroq(
-    model = 'llama-3.3-70b-versatile',
-    api_key=GROQ_API_KEY
+    model="openai/gpt-oss-20b",
+    api_key=GROQ_API_KEY,
+    temperature=0
 )
 
 class TripInfo(BaseModel):
     destination: str | None = None
     destination_iata: str | None = None
     origin: str | None = None
-    origin_iata : str | None = None
-    duration: str | None = None
+    origin_iata: str | None = None
+    duration: int | None = None
     budget: str | None = None
     start_date: str | None = None
 
@@ -70,48 +71,57 @@ def parser_agent(state: TravelState):
 
     query = state["user_query"]
 
-    structured_llm = llm.with_structured_output(TripInfo)
+    structured_llm = llm.with_structured_output(
+        TripInfo,
+        method="json_schema"
+    )
 
     parsed = structured_llm.invoke(
         f"""
-        Extract:
-        - destination city
-        - destination airport IATA code
-        - origin city
-        - origin airport IATA code
-        - duration
-        - budget
-        - travel date
+        Extract travel information from the user query.
 
-        Convert dates to YYYY-MM-DD format.
+        Extract these fields:
 
-        Example:
+        1. destination
+        - Destination city.
 
-        destination = London
-        destination_iata = LHR
+        2. destination_iata
+        - Main airport IATA code of the destination.
+        - Example: Paris -> CDG
 
-        origin = New York
-        origin_iata = JFK
+        3. origin
+        - Origin city.
+
+        4. origin_iata
+        - Main airport IATA code of the origin.
+        - Example: New York -> JFK
+
+        5. duration
+        - Return ONLY the number of travel days as an integer.
+        - Example: "5 days" -> 5
+
+        6. budget
+        - Extract the user's stated budget.
+        - If no budget is provided, return null.
+
+        7. start_date
+        - Convert the travel date to YYYY-MM-DD.
+        - If no travel date is provided, return null.
+
+        Do not ask the user for additional information.
+        Extract whatever information is available.
 
         User Query:
         {query}
         """
     )
 
-    # print("\n===== PARSED DATA =====")
-
-    # print("Destination:", parsed.destination)
-    # print("Origin:", parsed.origin)
-    # print("Duration:", parsed.duration)
-    # print("Budget:", parsed.budget)
-    # print("Date:", parsed.start_date)
-
     return {
         "destination": parsed.destination or "",
-        "destination_iata":parsed.destination_iata or "",
+        "destination_iata": parsed.destination_iata or "",
         "origin": parsed.origin or "",
-        "origin_iata" : parsed.origin_iata or "",
-        "duration": int(parsed.duration.split()[0]) if parsed.duration else 0,
+        "origin_iata": parsed.origin_iata or "",
+        "duration": parsed.duration or 0,
         "budget": parsed.budget or "",
         "start_date": parsed.start_date or "",
         "llm_calls": state.get("llm_calls", 0) + 1

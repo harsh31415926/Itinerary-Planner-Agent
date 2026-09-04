@@ -25,6 +25,15 @@ from agents import (
     final_agent
 )
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+os.environ["LANGSMITH_TRACING"] = "true"
+os.environ["LANGSMITH_PROJECT"] = "Itinerary_Planner"
+
+
 
 # DATABASE_URL = os.getenv('DATABASE_URL')
 

@@ -13,3 +13,4 @@ tavily-python
 requests
 streamlit
 grandalf
+langsmith
