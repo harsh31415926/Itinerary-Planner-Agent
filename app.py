@@ -275,13 +275,13 @@ with st.sidebar:
     st.markdown(f"<div class='sidebar-title'>{icon('plane', 18)} AI Travel Planner</div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    thread_id = st.text_input("User ID", value="harsh31415926",
+    thread_id = st.text_input("User ID", value="user",
                               help="Your session ID — keeps travel history across queries")
 
     st.markdown(f"<div class='sidebar-title'>{icon('cpu', 16)} Powered by</div>", unsafe_allow_html=True)
     STACK = [
         ("link", "LangGraph"),
-        ("cpu", "Groq · LLaMA 3.3 70B"),
+        ("cpu", "openai/gpt-oss-20b"),
         ("database", "PostgreSQL"),
         ("search", "Tavily Search"),
         ("plane", "AviationStack"),
