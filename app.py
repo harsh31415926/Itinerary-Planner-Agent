@@ -19,8 +19,8 @@ from agents import OPENAI_MODEL
 logger = logging.getLogger(__name__)
 
 st.set_page_config(
-    page_title="AI Travel Booking System",
-    page_icon=None,
+    page_title="Navora | AI Travel Planner",
+    page_icon="✈️",
     layout="wide"
 )
 
@@ -56,17 +56,17 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
 :root {
-    --bg-0: #0B0F19;
-    --bg-1: #111827;
-    --bg-2: #161B22;
-    --accent-1: #2563EB;
-    --accent-2: #3B82F6;
-    --accent-3: #60A5FA;
-    --teal: #14B8A6;
-    --sky: #38BDF8;
-    --text-hi: #FFFFFF;
-    --text-lo: #D1D5DB;
-    --border: rgba(255,255,255,0.08);
+    --bg-0: #0B1412;
+    --bg-1: #12201C;
+    --bg-2: #1A2B25;
+    --accent-1: #8CCF62;
+    --accent-2: #A4E276;
+    --accent-3: #C0F29A;
+    --teal: #65CDAF;
+    --sky: #83D7CA;
+    --text-hi: #F7FAF5;
+    --text-lo: #C5D1C8;
+    --border: rgba(202,239,207,0.12);
 }
 
 html, body, .stApp {
@@ -101,8 +101,8 @@ h1, h2, h3, .hero-title, .sec-head span, .sidebar-title {
     background: linear-gradient(180deg, rgba(11,15,25,0.15) 0%, rgba(11,15,25,0.65) 100%);
 }
 .hero-badge {
-    background: rgba(37,99,235,0.15);
-    border: 1px solid rgba(96,165,250,0.35);
+    background: rgba(140,207,98,0.13);
+    border: 1px solid rgba(192,242,154,0.36);
     color: var(--accent-3);
     font-size: 0.72rem; font-weight: 600;
     letter-spacing: 0.1em; text-transform: uppercase;
@@ -127,8 +127,8 @@ h1, h2, h3, .hero-title, .sec-head span, .sidebar-title {
     height: 92px; cursor: pointer; border: 1px solid var(--border);
     transition: transform 0.25s ease, border-color 0.25s ease;
 }
-.dest-card:hover { transform: translateY(-3px); border-color: var(--accent-2); }
-.dest-card img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.5); }
+.dest-card:hover { transform: translateY(-3px); border-color: var(--accent-2); box-shadow: 0 10px 24px rgba(0,0,0,0.22); }
+.dest-card img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.58) saturate(0.82); }
 .dest-label {
     position: absolute; bottom: 8px; left: 0; right: 0; text-align: center;
     color: #fff; font-size: 0.78rem; font-weight: 600;
@@ -162,13 +162,13 @@ div[data-testid="stButton"] > button:hover {
    through container width + a distinguishing class added just below via markdown. */
 div[data-testid="stButton"]:has(button[kind="primary"]) > button,
 button[kind="primary"] {
-    background: linear-gradient(135deg, var(--accent-1), #1D4ED8) !important;
-    color: #fff !important;
+    background: linear-gradient(135deg, var(--accent-1), #68A84C) !important;
+    color: #102016 !important;
     border: none !important;
-    box-shadow: 0 0 0 1px rgba(96,165,250,0.25), 0 8px 24px rgba(37,99,235,0.35) !important;
+    box-shadow: 0 0 0 1px rgba(192,242,154,0.22), 0 8px 24px rgba(94,151,66,0.22) !important;
 }
 button[kind="primary"]:hover {
-    box-shadow: 0 0 0 1px rgba(96,165,250,0.4), 0 10px 30px rgba(37,99,235,0.5) !important;
+    box-shadow: 0 0 0 1px rgba(192,242,154,0.4), 0 10px 30px rgba(94,151,66,0.32) !important;
     transform: translateY(-1px) !important;
 }
 
@@ -211,9 +211,9 @@ button[kind="primary"]:hover {
 
 /* ── Final plan card (glass) ── */
 .final-card {
-    background: linear-gradient(160deg, rgba(37,99,235,0.08) 0%, rgba(17,24,39,0.9) 55%);
+    background: linear-gradient(160deg, rgba(140,207,98,0.09) 0%, rgba(18,32,28,0.94) 55%);
     backdrop-filter: blur(6px);
-    border: 1px solid rgba(96,165,250,0.25);
+    border: 1px solid rgba(192,242,154,0.22);
     border-left: 3px solid var(--accent-2);
     border-radius: 16px; padding: 1.9rem;
     line-height: 1.8; color: var(--text-lo); font-size: 0.95rem;
@@ -286,7 +286,7 @@ hr { border-color: var(--border) !important; }
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown(f"<div class='sidebar-title'>{icon('plane', 18)} AI Travel Planner</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sidebar-title'>{icon('plane', 18, 'var(--accent-3)')} NAVORA</div><div style='font-size:.68rem;letter-spacing:.15em;color:#8EA397;margin:-.35rem 0 1rem 1.65rem'>TRAVEL, MADE PERSONAL</div>", unsafe_allow_html=True)
     st.markdown("---")
 
     thread_id = st.text_input("User ID", value="user",
@@ -320,9 +320,9 @@ st.markdown(f"""
          src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1400&q=80"
          alt="airplane above clouds"/>
     <div class="hero-content">
-        <div class="hero-badge">{icon('sparkle', 13)} Multi-Agent AI System</div>
-        <div class="hero-title">{icon('plane', 30)} AI Travel Booking System</div>
-        <div class="hero-sub">Four specialized agents work together — searching flights, hotels, building an itinerary, and delivering your perfect trip plan.</div>
+        <div class="hero-badge">{icon('sparkle', 13)} YOUR PERSONAL TRAVEL CONCIERGE</div>
+        <div class="hero-title">{icon('plane', 30)} Navora</div>
+        <div class="hero-sub">Thoughtful trips, brought together in one place. Navora finds flights and stays, then shapes them into a day-by-day itinerary made for you.</div>
     </div>
 </div>
 """, unsafe_allow_html=True)

@@ -1,4 +1,4 @@
-# ◈ Itinerary Planner Agent
+# ✈ Navora — AI Itinerary Planner
 
 A production-oriented multi-agent travel intelligence system built with **LangGraph**, **OpenAI GPT**, **Tavily Search**, **AviationStack**, **PostgreSQL**, and **Streamlit**.
 
