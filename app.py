@@ -415,8 +415,10 @@ if generate:
                         st.markdown(text or "_No itinerary generated._")
 
                     elif node_name == "final_agent":
-                        msgs = state_update.get("messages", [])
-                        text = msgs[-1].content if msgs else ""
+                        text = state_update.get("final_response", "")
+                        if not text:
+                            msgs = state_update.get("messages", [])
+                            text = msgs[-1].content if msgs else ""
                         collected["final_response"] = text
                         st.markdown(text or "_No final response._")
 

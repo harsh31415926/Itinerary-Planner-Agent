@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 travel_plans/
+.env
+.venv/
+__pycache__/
+*.pyc
+.streamlit/secrets.toml

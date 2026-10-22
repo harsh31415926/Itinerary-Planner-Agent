@@ -55,6 +55,7 @@ class TravelState(TypedDict):
     flight_result : str
     hotel_result : str
     itinerary: str
+    final_response: str
     llm_calls: int
 
 
@@ -403,8 +404,12 @@ def final_agent(state:TravelState):
             HumanMessage(content=prompt)
         ])
 
+    final_response = response.content
+    if not isinstance(final_response, str) or not final_response.strip():
+        raise ValueError("Final agent returned an empty response")
+
     return {
-    "itinerary": response.content,
-    "messages": [response],
-    "llm_calls": state.get("llm_calls", 0) + 1
-}
+        "final_response": final_response,
+        "messages": [response],
+        "llm_calls": state.get("llm_calls", 0) + 1,
+    }

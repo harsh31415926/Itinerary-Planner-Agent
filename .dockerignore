@@ -4,3 +4,10 @@ __pycache__
 .git
 .env
 *.pyc
+.env
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+travel_plans/*
