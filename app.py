@@ -1,8 +1,22 @@
 import os
+import logging
 import streamlit as st
 from datetime import datetime
 from langchain_core.messages import HumanMessage
+
+for setting_name in ("OPENAI_API_KEY", "OPENAI_MODEL"):
+    if not os.environ.get(setting_name):
+        try:
+            secret_value = st.secrets.get(setting_name)
+        except Exception:
+            secret_value = None
+        if secret_value:
+            os.environ[setting_name] = str(secret_value)
+
 from main import app
+from agents import OPENAI_MODEL
+
+logger = logging.getLogger(__name__)
 
 st.set_page_config(
     page_title="AI Travel Booking System",
@@ -281,7 +295,7 @@ with st.sidebar:
     st.markdown(f"<div class='sidebar-title'>{icon('cpu', 16)} Powered by</div>", unsafe_allow_html=True)
     STACK = [
         ("link", "LangGraph"),
-        ("cpu", "openai/gpt-oss-20b"),
+        ("cpu", OPENAI_MODEL),
         ("database", "PostgreSQL"),
         ("search", "Tavily Search"),
         ("plane", "AviationStack"),
@@ -357,6 +371,7 @@ generate = st.button("Generate My Travel Plan", use_container_width=True, type="
 
 # ── Agent pipeline ────────────────────────────────────────────────────────────
 AGENT_META = {
+    "clarification_agent": ("map", "Trip Details Needed"),
     "flight_agent":    ("plane", "Flight Agent"),
     "hotel_agent":     ("hotel", "Hotel Agent"),
     "itinerary_agent": ("calendar", "Itinerary Agent"),
@@ -369,66 +384,85 @@ if generate:
     else:
         config = {"configurable": {"thread_id": thread_id}}
         collected = {"flight_results": "", "hotel_results": "",
-                     "itinerary": "", "final_response": "", "llm_calls": 0}
+                     "itinerary": "", "final_response": "", "clarification": "", "llm_calls": 0}
 
         st.markdown("---")
         st.markdown(f"<div class='sec-head'>{icon('cpu', 18)}<span>Agent Pipeline — Live</span></div>",
                     unsafe_allow_html=True)
 
-        for chunk in app.stream(
-            {
-                "messages": [HumanMessage(content=user_query)],
-                "user_query": user_query,
-                "flight_results": "",
-                "hotel_results": "",
-                "itinerary": "",
-                "llm_calls": 0,
-            },
-            config=config,
-            stream_mode="updates",
-        ):
-            for node_name, state_update in chunk.items():
-                ic, label = AGENT_META.get(node_name, ("cpu", node_name))
+        current_node = "parser_agent"
+        try:
+            for chunk in app.stream(
+                {
+                    "messages": [HumanMessage(content=user_query)],
+                    "user_query": user_query,
+                    "destination": "",
+                    "destination_iata": "",
+                    "origin": "",
+                    "origin_iata": "",
+                    "budget": "",
+                    "duration": 0,
+                    "start_date": "",
+                    "flight_result": "",
+                    "hotel_result": "",
+                    "itinerary": "",
+                    "final_response": "",
+                    "clarification": "",
+                    "llm_calls": 0,
+                },
+                config=config,
+                stream_mode="updates",
+            ):
+                for node_name, state_update in chunk.items():
+                    current_node = node_name
+                    _, label = AGENT_META.get(node_name, ("cpu", node_name))
 
-                with st.status(f"{label}", state="complete", expanded=True):
-                    if node_name == "flight_agent":
-                        text = state_update.get("flight_result", "")
-                        collected["flight_results"] = text
+                    with st.status(f"{label}", state="complete", expanded=True):
+                        if node_name == "clarification_agent":
+                            collected["clarification"] = state_update.get("clarification", "")
+                            st.info(collected["clarification"] or "Please provide a destination and trip length.")
 
-                        with st.expander("Debug: flight_agent raw output", expanded=False):
-                            st.write(state_update)
+                        elif node_name == "flight_agent":
+                            text = state_update.get("flight_result", "")
+                            collected["flight_results"] = text
+                            with st.expander("Debug: flight_agent raw output", expanded=False):
+                                st.write(state_update)
+                            st.markdown(text or "_No flight data returned._")
 
-                        st.markdown(text or "_No flight data returned._")
+                        elif node_name == "hotel_agent":
+                            text = state_update.get("hotel_result", "")
+                            collected["hotel_results"] = text
+                            with st.expander("Debug: hotel_agent search evidence", expanded=False):
+                                st.write(text or "No hotel search evidence returned.")
+                            st.caption("Hotel search evidence collected. Verified recommendations and source links appear in the final travel plan.")
 
-                    elif node_name == "hotel_agent":
-                        text = state_update.get("hotel_result", "")
-                        collected["hotel_results"] = text
+                        elif node_name == "itinerary_agent":
+                            text = state_update.get("itinerary", "")
+                            collected["itinerary"] = text
+                            st.markdown("**Draft itinerary**")
+                            st.markdown(text or "_No itinerary draft generated._")
 
-                        with st.expander("Debug: hotel_agent raw output", expanded=False):
-                            st.write(state_update)
-
-                        st.markdown(text or "_No hotel data returned._")
-
-                    elif node_name == "itinerary_agent":
-                        text = state_update.get("itinerary", "")
-                        collected["itinerary"] = text
-                        st.markdown(text or "_No itinerary generated._")
-
-                    elif node_name == "final_agent":
-                        text = state_update.get("final_response", "")
-                        if not text:
-                            msgs = state_update.get("messages", [])
-                            text = msgs[-1].content if msgs else ""
-                        collected["final_response"] = text
-                        st.markdown(text or "_No final response._")
-
-                    for node_name, state_update in chunk.items():
-                        print("\n===================")
-                        print("NODE:", node_name)
-                        print("UPDATE:", state_update)
-                        print("===================\n")
+                        elif node_name == "final_agent":
+                            text = state_update.get("final_response", "")
+                            if not text:
+                                msgs = state_update.get("messages", [])
+                                text = msgs[-1].content if msgs else ""
+                            collected["final_response"] = text
+                            st.markdown(text or "_No final response._")
 
                     collected["llm_calls"] = state_update.get("llm_calls", collected["llm_calls"])
+        except Exception as exc:
+            logger.exception("Travel workflow failed in %s", current_node)
+            if getattr(exc, "status_code", None) == 429:
+                st.error("The travel model is still rate limited after retries. Please wait briefly and submit again.")
+            elif getattr(exc, "status_code", None) in {401, 403}:
+                st.error("OpenAI rejected the configured API key or model access. Check OPENAI_API_KEY and OPENAI_MODEL in .env or Streamlit Secrets.")
+            else:
+                st.error(f"The {current_node.replace('_', ' ')} could not complete: {exc}")
+            st.stop()
+
+        if collected["clarification"]:
+            st.stop()
 
         # Metrics
         st.markdown(f"""
@@ -443,8 +477,8 @@ if generate:
         if collected["final_response"]:
             st.markdown(f"<div class='sec-head'>{icon('brain', 18)}<span>Final Travel Plan</span></div>",
                         unsafe_allow_html=True)
-            st.markdown(f"<div class='final-card'>{collected['final_response']}</div>",
-                        unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown(collected["final_response"])
 
         # Save
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -465,7 +499,7 @@ if generate:
 ---
 
 ## Hotel Information
-{collected['hotel_results'] or 'N/A'}
+See the Recommended Hotels section in the final travel plan. Source search evidence is available in the Hotel Agent expander above.
 
 ---
 

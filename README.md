@@ -1,6 +1,6 @@
 # ◈ Itinerary Planner Agent
 
-A production-oriented multi-agent travel intelligence system built with **LangGraph**, **Groq LLMs**, **Tavily Search**, **AviationStack**, **PostgreSQL**, and **Streamlit**.
+A production-oriented multi-agent travel intelligence system built with **LangGraph**, **OpenAI GPT**, **Tavily Search**, **AviationStack**, **PostgreSQL**, and **Streamlit**.
 
 The platform employs an agent-based orchestration layer that transforms natural language travel requests into structured travel plans by autonomously extracting trip parameters, gathering external travel intelligence, evaluating accommodation options, analyzing flight routes, and generating comprehensive itineraries.
 
@@ -52,7 +52,7 @@ Travel Report
 
 | Layer               | Technology             |
 | ------------------- | ---------------------- |
-| LLM                 | Groq Llama 3.3 70B     |
+| LLM                 | OpenAI GPT (configurable) |
 | Agent Framework     | LangGraph              |
 | Search Intelligence | Tavily                 |
 | Aviation Data       | AviationStack          |
@@ -68,7 +68,8 @@ Travel Report
 Create a `.env` file in the project root:
 
 ```env
-GROQ_API_KEY=your_groq_api_key
+OPENAI_API_KEY=put_your_openai_api_key_here
+OPENAI_MODEL=gpt-4.1-mini
 
 TAVILY_API_KEY=your_tavily_api_key
 
@@ -76,6 +77,8 @@ AVIATION_STACK_API_KEY=your_aviationstack_api_key
 
 DATABASE_URL=postgresql://username:password@localhost:5432/database_name
 ```
+
+For Streamlit Community Cloud, add `OPENAI_API_KEY` and `OPENAI_MODEL` under **App settings → Secrets**. The local `.env` file is not deployed automatically. The default model is configurable; OpenAI currently lists `gpt-4.1-mini` as deprecated, so select a supported model in `OPENAI_MODEL` when migrating to a newer model.
 
 ---
 

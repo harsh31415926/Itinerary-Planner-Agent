@@ -3,6 +3,9 @@ from typing import TypedDict, Annotated
 from pydantic import BaseModel
 import operator 
 import json
+import logging
+import re
+import time
 
 # import psycopg
 from langgraph.graph import StateGraph , START , END
@@ -10,7 +13,7 @@ from langgraph.graph import StateGraph , START , END
 
 from langchain_core.messages import (AnyMessage , HumanMessage , SystemMessage , AIMessage)
 
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 
 from tools.tavily_tool import tavily_search
 from tools.flight_tool import search_flights
@@ -19,13 +22,39 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
 
-llm = ChatGroq(
-    model="openai/gpt-oss-20b",
-    api_key=GROQ_API_KEY,
-    temperature=0
+llm = ChatOpenAI(
+    model=OPENAI_MODEL,
+    api_key=OPENAI_API_KEY,
+    temperature=0,
+    max_retries=0,
 )
+logger = logging.getLogger(__name__)
+
+
+def invoke_llm_with_rate_limit_retry(callable_, *args, **kwargs):
+    """Retry short-lived provider rate limits, then let failures surface."""
+    for attempt in range(3):
+        try:
+            return callable_(*args, **kwargs)
+        except Exception as exc:
+            if getattr(exc, "status_code", None) != 429 or attempt == 2:
+                raise
+
+            headers = getattr(getattr(exc, "response", None), "headers", {}) or {}
+            reset = headers.get("x-ratelimit-reset-tokens") or headers.get("retry-after")
+            delay = None
+            if reset:
+                match = re.search(r"\d+(?:\.\d+)?", str(reset))
+                if match:
+                    delay = float(match.group())
+                    if str(reset).strip().lower().endswith("ms"):
+                        delay /= 1000
+            delay = min(max(delay if delay is not None else 2 ** (attempt + 1), 1), 30)
+            logger.warning("LLM rate limit reached; retrying in %.1f seconds (attempt %s/3)", delay, attempt + 2)
+            time.sleep(delay)
 
 class TripInfo(BaseModel):
     destination: str | None = None
@@ -56,6 +85,7 @@ class TravelState(TypedDict):
     hotel_result : str
     itinerary: str
     final_response: str
+    clarification: str
     llm_calls: int
 
 
@@ -71,13 +101,16 @@ class TravelState(TypedDict):
 def parser_agent(state: TravelState):
 
     query = state["user_query"]
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key or api_key.lower() in {"put_your_openai_api_key_here", "your_openai_api_key"}:
+        raise RuntimeError("Set a valid OPENAI_API_KEY in .env or Streamlit Secrets")
 
     structured_llm = llm.with_structured_output(
         TripInfo,
         method="json_schema"
     )
 
-    parsed = structured_llm.invoke(
+    parsed = invoke_llm_with_rate_limit_retry(structured_llm.invoke,
         f"""
         Extract travel information from the user query.
 
@@ -129,6 +162,25 @@ def parser_agent(state: TravelState):
     }
 
 
+def clarification_agent(state: TravelState):
+    missing = []
+    if not state.get("destination"):
+        missing.append("destination")
+    if not state.get("duration"):
+        missing.append("trip length")
+    details = " and ".join(missing)
+    return {
+        "clarification": f"To build your itinerary, please share your {details}. You can also include your departure city, travel dates, and budget for more relevant flight and hotel results.",
+        "messages": [AIMessage(content="More trip details are needed before planning.")],
+    }
+
+
+def route_after_parser(state: TravelState):
+    if not state.get("destination") or not state.get("duration"):
+        return "clarification_agent"
+    return "flight_agent"
+
+
 ''' ======================================== '''
 
 def flight_agent(state: TravelState):
@@ -137,11 +189,14 @@ def flight_agent(state: TravelState):
     destination = state["destination_iata"]
     start_date = state["start_date"]
 
-    flight_result = search_flights(
-        destination=destination,
-        origin=origin,
-        travel_date=start_date
-    )
+    if not origin or not destination or not start_date:
+        flight_result = "Live flight search unavailable: origin airport, destination airport, or travel date is missing."
+    else:
+        flight_result = search_flights(
+            destination=destination,
+            origin=origin,
+            travel_date=start_date
+        )
 
     # print("\n========== FLIGHT RESULT ==========")
     # print(flight_result)
@@ -170,8 +225,14 @@ def flight_agent(state: TravelState):
 def hotel_agent(state:TravelState):
     destination = state["destination"]
 
+    if not destination:
+        return {
+            "hotel_result": "Hotel search unavailable because no destination was provided.",
+            "messages": [AIMessage(content="Hotel search skipped: destination missing")],
+        }
+
     hotel_result = tavily_search(
-        f"top luxury hotels in {destination} with ratings and prices, don't give me links, just tell me the name of the hotel and the ratings of that "
+        f"luxury hotels in {destination}; official hotel sites, amenities, published room rates, and reliable hotel details"
     )
 
 
@@ -198,28 +259,22 @@ def hotel_agent(state:TravelState):
 def itinerary_agent(state: TravelState):
 
     prompt = f"""
-Destination:
-{state['destination']}
+Original travel request:
+{state.get('user_query', '')}
+Destination: {state.get('destination') or 'not provided'}
+Origin: {state.get('origin') or 'not provided'}
+Duration: {state.get('duration') or 'not provided'} days
+Budget: {state.get('budget') or 'not provided'}
+Travel date: {state.get('start_date') or 'not provided'}
 
-Origin:
-{state['origin']}
+Flight information:
+{state.get('flight_result') or 'Unavailable'}
+Hotel research evidence:
+{state.get('hotel_result') or 'Unavailable'}
 
-Duration:
-{state['duration']} days
-
-Budget:
-{state['budget']}
-
-Travel Date:
-{state['start_date']}
-
-Flight Information:
-{state['flight_result']}
-
-Hotel Information:
-{state['hotel_result']}
+Create a personalised day-by-day draft itinerary using the known requirements. Do not ask the traveler to repeat details. Do not invent flight schedules, hotel prices, ratings, or availability. If optional details or live data are missing, say so briefly and continue planning with the information available. Clearly label cost estimates.
 """
-    response = llm.invoke([
+    response = invoke_llm_with_rate_limit_retry(llm.invoke, [
 
         SystemMessage(content = 'You are a professional travel planner ') , 
         HumanMessage(content = prompt)
@@ -250,6 +305,8 @@ def final_agent(state:TravelState):
         You have to plan the whole trip 
         This is user query --> {state['user_query']}
 
+        Parsed trip details: destination={state.get('destination') or 'not provided'}, origin={state.get('origin') or 'not provided'}, duration={state.get('duration') or 'not provided'}, budget={state.get('budget') or 'not provided'}, travel date={state.get('start_date') or 'not provided'}.
+
         These are the flight details --> {state['flight_result']}
 
         These are the hotel_result --> {state['hotel_result']}
@@ -257,7 +314,7 @@ def final_agent(state:TravelState):
         This is the itinerary --> {state['itinerary']}
         '''
     
-    response = llm.invoke([
+    response = invoke_llm_with_rate_limit_retry(llm.invoke, [
     SystemMessage(
                 content="""
         You are a world-class luxury travel consultant.
@@ -325,6 +382,7 @@ def final_agent(state:TravelState):
         300 -> $300
 
         8. Never expose raw search results.
+        Use hotel names and facts supported by the hotel evidence, with a source URL for each sourced recommendation. If price, rating, amenities, or availability are not present in the evidence, state that they were not verified; do not invent them. Continue with the known trip details when optional details are missing.
 
         9. Create a polished travel report using EXACTLY this structure:
 

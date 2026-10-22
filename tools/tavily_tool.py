@@ -7,32 +7,31 @@ load_dotenv()
 
 API_KEY = os.getenv("TAVILY_API_KEY")
 
-client = TavilyClient(api_key=API_KEY)
-
 def tavily_search(query:str) -> str:
+    if not API_KEY:
+        raise RuntimeError("TAVILY_API_KEY is not configured")
 
-    response= client.search(query = query , max_results = 7)
+    response = TavilyClient(api_key=API_KEY).search(query=query, max_results=5)
+    if not isinstance(response, dict):
+        raise RuntimeError("Tavily returned an invalid search response")
 
     results = []
 
-    for i , r in enumerate(response['results'] ,1 ):
-        title = r.get('title' , 'unknown')
-        url = r.get('url', 'unknown')
-        snippet = r.get('content', '').strip()
+    raw_results = response.get("results", [])
+    if not isinstance(raw_results, list):
+        raise RuntimeError("Tavily returned malformed search results")
 
-        if len(snippet) > 377:
-            snippet = snippet[:377].rsplit(" " , 1)[0] + '...'
-            
-            """ 
-            s = 'this is a very good movie.
-            s[:24] = 'this is a very good mov'
-            s[:24].rsplit() = [this is a very good mov , ie]
-            s[:24].rsplit('' ,1) = this is a very good 
-            
-            # deletes the incomplete word
-            """
+    for i, r in enumerate(raw_results, 1):
+        if not isinstance(r, dict):
+            continue
+        title = r.get('title') or 'Untitled source'
+        url = r.get('url') or ''
+        snippet = (r.get('content') or '').strip()
+
+        if len(snippet) > 260:
+            snippet = snippet[:260].rsplit(" ", 1)[0] + "…"
         
-        results.append(f''' {i}.**{title}**\n {url}\n {snippet}''')
+        results.append(f"{i}. {title}\nSource: {url or 'not provided'}\nEvidence: {snippet or 'No descriptive excerpt returned.'}")
     
     return '\n\n'.join(results) if results else "No hotel found"
 

@@ -1,14 +1,12 @@
-import os 
+import os
 from typing import TypedDict, Annotated
-import operator 
+import operator
 
 # import psycopg
 from langgraph.graph import StateGraph , START , END
 # from langgraph.checkpoint.postgres import PostgresSaver
 
 from langchain_core.messages import (AnyMessage , HumanMessage , SystemMessage , AIMessage)
-
-from langchain_groq import ChatGroq
 
 from tools.tavily_tool import tavily_search
 from tools.flight_tool import search_flights
@@ -17,12 +15,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from agents import (
-    TravelState, 
-    flight_agent, 
+    TravelState,
+    flight_agent,
     parser_agent,
-    hotel_agent, 
-    itinerary_agent, 
-    final_agent
+    hotel_agent,
+    itinerary_agent,
+    final_agent,
+    clarification_agent,
+    route_after_parser,
 )
 
 import os
@@ -46,13 +46,19 @@ graph.add_node('flight_agent' , flight_agent)
 graph.add_node('hotel_agent' , hotel_agent)
 graph.add_node('itinerary_agent' , itinerary_agent)
 graph.add_node('final_agent' , final_agent)
+graph.add_node('clarification_agent', clarification_agent)
 
 graph.add_edge(START , 'parser_agent')
-graph.add_edge('parser_agent' , 'flight_agent')
+graph.add_conditional_edges(
+    'parser_agent',
+    route_after_parser,
+    {'flight_agent': 'flight_agent', 'clarification_agent': 'clarification_agent'},
+)
 graph.add_edge('flight_agent' , 'hotel_agent')
 graph.add_edge('hotel_agent' , 'itinerary_agent')
 graph.add_edge('itinerary_agent' , 'final_agent')
 graph.add_edge('final_agent' , END)
+graph.add_edge('clarification_agent', END)
 
 # print(DATABASE_URL)
 
@@ -121,4 +127,4 @@ if __name__ == '__main__':
     #     print(msg.content)
     #     print(result["flight_result"])
     #     print(result["hotel_result"])
-    
+
